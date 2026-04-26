@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>rose Pro - 巅峰发布会</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        body {
+            margin: 0; padding: 0; overflow-x: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f7; 
+            color: #1d1d1f;
+            -webkit-font-smoothing: antialiased;
+        }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        /* 顶级大厂质感：景深渐变背景系统 */
+        #bg-system { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -5; pointer-events: none; }
+        .bg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .bg-active { opacity: 1; }
+
+        .bg-intro { background: radial-gradient(circle at 50% 30%, #ffffff 0%, #f5f5f7 60%, #e5e5ea 100%); }
+        .bg-black { background: radial-gradient(circle at 50% 50%, #1f1f22 0%, #0a0a0c 80%, #000000 100%); }
+        .bg-pink  { background: radial-gradient(circle at 50% 50%, #fff0f5 0%, #fdf2f8 70%, #fce7f3 100%); }
+        .bg-blue  { background: radial-gradient(circle at 50% 50%, #f0f9ff 0%, #e0f2fe 70%, #bae6fd 100%); }
+        .bg-anc   { background: radial-gradient(circle at 50% 50%, #334155 0%, #0f172a 80%, #020617 100%); }
+        .bg-eq    { background: radial-gradient(circle at 50% 50%, #171717 0%, #0a0a0a 80%, #000000 100%); }
+        .bg-dolby { background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #0f0a29 80%, #000000 100%); }
+        .bg-water { background: radial-gradient(circle at 50% 50%, #001a33 0%, #000b1a 80%, #000000 100%); }
+        
+        .image-bg {
+            background-image: url('image_f164b3.jpg');
+            background-size: cover; background-position: center; filter: brightness(0.85) contrast(1.1);
+        }
+
+        #canvas-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10; pointer-events: none; }
+
+        nav {
+            position: fixed; top: 0; width: 100%; padding: 24px 48px;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 200; mix-blend-mode: difference; color: white;
+            box-sizing: border-box;
+        }
+        .logo { font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+        .nav-links a { margin-left: 40px; font-size: 12px; font-weight: 600; text-decoration: none; color: inherit; opacity: 0.8; letter-spacing: 1px; text-transform: uppercase;}
+        
+        #scroll-content { position: relative; z-index: 100; pointer-events: none; }
+
+        /* 文字层 */
+        .text-block {
+            pointer-events: auto; opacity: 0; transform: translateY(50px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 900px; position: fixed; top: 18%; left: 50%; transform: translate(-50%, 0);
+            width: 90%; display: none; z-index: 300; text-align: center;
+        }
+        .text-block.visible { opacity: 1; display: block; transform: translate(-50%, 0); }
+
+        h1 { font-size: 5.5rem; font-weight: 700; margin-bottom: 20px; letter-spacing: -0.05em; line-height: 1.05; }
+        h2 { font-size: 3.5rem; font-weight: 600; margin-bottom: 20px; letter-spacing: -0.02em; }
+        p { font-size: 1.6rem; opacity: 0.85; max-width: 750px; margin: 0 auto; line-height: 1.6; word-break: keep-all; font-weight: 500; }
+
+        .theme-dark-bg { color: #ffffff; text-shadow: 0 4px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0,0,0,0.5); }
+        .theme-light-bg { color: #1d1d1f; text-shadow: 0 4px 20px rgba(255,255,255,0.9); }
+
+        /* 沉浸式功能组件 */
+        .cinema-bar { position: fixed; left: 0; width: 100vw; height: 12vh; background: #000; z-index: 150; transition: transform 0.8s cubic-bezier(0.4,0,0.2,1); }
+        .cinema-top { top: 0; transform: translateY(-100%); }
+        .cinema-bottom { bottom: 0; transform: translateY(100%); }
+        .cinema-active { transform: translateY(0); }
+
+        .eq-panel {
+            position: fixed; left: 50%; bottom: 15%; transform: translate(-50%, 50px);
+            width: 380px; height: 140px; background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(40px) saturate(180%); border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 40px; padding: 30px; display: flex; align-items: flex-end; justify-content: space-between;
+            z-index: 145; opacity: 0; transition: all 0.8s cubic-bezier(0.4,0,0.2,1);
+            box-sizing: border-box;
+        }
+        .eq-panel.active { transform: translate(-50%, 0); opacity: 1; }
+        .eq-bar { width: 14%; background: #fff; border-radius: 8px; height: 10%; transition: height 0.1s linear; box-shadow: 0 0 15px rgba(255,255,255,0.3); }
+
+        .water-surface {
+            position: fixed; bottom: 0; left: 0; width: 100vw; height: 45vh;
+            background: linear-gradient(180deg, rgba(0, 150, 255, 0.1) 0%, rgba(0, 50, 150, 0.7) 100%);
+            backdrop-filter: blur(12px); z-index: 10; transform: translateY(100%); transition: transform 1.2s ease;
+            border-top: 1px solid rgba(255,255,255,0.15); box-shadow: inset 0 10px 40px rgba(0,100,255,0.3);
+        }
+        .water-surface.active { transform: translateY(0); }
+
+        .anc-waveform {
+            position: fixed; top: 50%; width: 240px; height: 100px; transform: translateY(-50%);
+            display: flex; align-items: center; justify-content: space-between;
+            z-index: 4; opacity: 0; transition: opacity 0.8s ease; pointer-events: none;
+        }
+        .anc-waveform.left { left: 8%; }
+        .anc-waveform.right { right: 8%; transform: translateY(-50%) scaleX(-1); }
+        .anc-waveform.active { opacity: 0.9; }
+        .wave-bar { width: 4px; height: 20%; background: #60a5fa; border-radius: 4px; box-shadow: 0 0 15px rgba(96, 165, 250, 0.8); }
+        
+        .shockwave {
+            position: fixed; top: 75%; left: 50%; width: 10px; height: 10px;
+            background: transparent; border: 2px solid #fff; border-radius: 50%;
+            transform: translate(-50%, -50%) rotateX(75deg) scale(0); opacity: 0; z-index: 5; pointer-events: none;
+        }
+        .shockwave.trigger { animation: shock 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+        @keyframes shock { 0% { transform: translate(-50%, -50%) rotateX(75deg) scale(0); opacity: 1; border-width: 8px; } 100% { transform: translate(-50%, -50%) rotateX(75deg) scale(90); opacity: 0; border-width: 0px; } }
+
+        .btn-buy {
+            display: inline-block; margin-top: 40px; padding: 18px 50px; background: #000; color: #fff;
+            border-radius: 40px; font-size: 16px; font-weight: 700; text-decoration: none; transition: all 0.4s; pointer-events: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .btn-buy:hover { transform: scale(1.05); }
+
+        /* ================= 核心：移动端全面自适应适配 ================= */
+        @media (max-width: 768px) {
+            nav { padding: 16px 20px; }
+            .logo { font-size: 20px; }
+            .nav-links a { margin-left: 15px; font-size: 10px; }
+            
+            .text-block { top: 12%; } /* 文字稍微上移，给模型腾出空间 */
+            h1 { font-size: 2.8rem; margin-bottom: 12px; }
+            h2 { font-size: 2rem; margin-bottom: 12px; }
+            p { font-size: 1.15rem; line-height: 1.5; padding: 0 10px; }
+            
+            .eq-panel { width: 85%; max-width: 320px; height: 100px; padding: 20px; bottom: 12%; border-radius: 25px; }
+            .anc-waveform { width: 100px; height: 60px; }
+            .anc-waveform.left { left: 4%; }
+            .anc-waveform.right { right: 4%; }
+            .wave-bar { width: 3px; }
+            .cinema-bar { height: 8vh; }
+            
+            .btn-buy { padding: 14px 40px; font-size: 14px; margin-top: 20px; }
+            
+            /* 修正终屏巨型标题 */
+            #scroll-content > div:last-child h1 { font-size: 3.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bg-system">
+        <div class="bg-layer bg-intro bg-active" id="bg-intro"></div>
+        <div class="bg-layer bg-black" id="bg-black"></div>
+        <div class="bg-layer bg-pink" id="bg-pink"></div>
+        <div class="bg-layer bg-blue" id="bg-blue"></div>
+        <div class="bg-layer bg-anc" id="bg-anc"></div>
+        <div class="bg-layer bg-eq" id="bg-eq"></div>
+        <div class="bg-layer image-bg" id="bg-mountain"></div>
+        <div class="bg-layer bg-dolby" id="bg-dolby"></div>
+        <div class="bg-layer bg-water" id="bg-water"></div>
+    </div>
+
+    <div class="anc-waveform left" id="anc-left"></div>
+    <div class="anc-waveform right" id="anc-right"></div>
+    <div class="water-surface" id="water-surface"></div>
+    <div class="cinema-bar cinema-top"></div>
+    <div class="cinema-bar cinema-bottom"></div>
+    <div class="shockwave"></div>
+    
+    <div class="eq-panel" id="eq-panel">
+        <div class="eq-bar" style="background:#ef4444"></div>
+        <div class="eq-bar" style="background:#06b6d4"></div>
+        <div class="eq-bar" style="background:#ffffff"></div>
+        <div class="eq-bar" style="background:#0ea5e9"></div>
+        <div class="eq-bar" style="background:#f97316"></div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <nav>
+        <div class="logo">rose Pro.</div>
+        <div class="nav-links"><a href="#">Overview</a><a href="#">Tech Specs</a><a href="#">Buy</a></div>
+    </nav>
+
+    <div id="scroll-content" style="height: 3500vh;">
+        <div class="text-block theme-light-bg visible"><h1>纯粹。重塑。</h1><p>极简流线，温润白瓷质感。<br>这一次，以毫不妥协的工业结构，成就顶级声学艺术。</p></div>
+        <div class="text-block theme-light-bg"><h2>严丝合缝。</h2><p>精密计算的物理深槽与穹顶空腔。<br>温润的阻尼感于无声中流露，完美包裹每一寸曲面。</p></div>
+        <div class="text-block theme-dark-bg"><h2>深空曜石。</h2><p>如黑洞般吞噬光线的微晶暗灰。<br>与半透明黑硅胶交织出极致的深邃，冷峻中透出科技的锋芒。</p></div>
+        <div class="text-block theme-light-bg"><h2 style="color: #ec4899;">落樱晨光。</h2><p>专属调配的低饱和珠光粉体。<br>在极光照耀下，倒映出属于你的优雅温度与灵动气息。</p></div>
+        <div class="text-block theme-light-bg"><h2 style="color: #3b82f6;">冰川极光。</h2><p>澄澈通透的科技冷调。<br>宛如深海冰晶，纯净、空灵，每一个角度都闪耀着理性的光辉。</p></div>
+        <div class="text-block theme-light-bg"><h2>仿若无物。</h2><p>单耳轻若飞羽，佩戴瞬间科技消隐。<br>柔软的半透明硅胶完美贴合耳道，唯留澎湃纯音将你包裹。</p></div>
+        <div class="text-block theme-dark-bg"><h2>瞬间，隔绝喧嚣。</h2><p>主动降噪技术实时捕获外界噪音。<br>特制抗风噪麦克风网罩，为你创造绝对的私人静谧空间。</p></div>
+        <div class="text-block theme-light-bg"><h2>指尖，全盘掌控。</h2><p>精密切割的触控微凹槽。<br>内置高灵敏压力传感器，切歌、切换模式，只需轻捏，即刻响应。</p></div>
+        <div class="text-block theme-dark-bg"><h2>潜入深渊，无所畏惧。</h2><p>IPX8 级顶级深度防水结构。<br>无惧意外坠水，360° 镜像空翻后，它依然悦耳如初。</p></div>
+        <div class="text-block theme-dark-bg"><h2>56dB，静止世界。</h2><p>突破行业上限的 56dB 深度降噪。<br>屏幕陷入深沉的瞬间，斩断一切杂讯，听见宇宙的呼吸。</p></div>
+        <div class="text-block theme-dark-bg"><h2>自适应 EQ，由你定义。</h2><p>录音室级动态均衡器。<br>每秒百次频段回弹校准，让每一颗音符，都精准击中你的灵魂。</p></div>
+        <div class="text-block theme-dark-bg"><h2>金山之巅，色彩秩序。</h2><p>当日照金山的晨曦洒向微晶釉面。<br>曜石黑、晨光粉、冰川蓝，在壮阔景观中交相辉映，尽显旗舰奢华。</p></div>
+        <div class="text-block theme-dark-bg"><h2>坚韧，超乎想象。</h2><p>航空级超瓷晶面板与钛合金框架。<br>无惧意外跌落的物理震荡，弹起翻转，依旧完好无损。</p></div>
+        <div class="text-block theme-dark-bg"><h2 style="color:#e2e8f0;">Dolby Atmos，声临其境。</h2><p>杜比全景声影院级空间音频。<br>开启宽幅视野，动态头部追踪，你就是整座剧院的绝对中心。</p></div>
+        <div class="text-block theme-light-bg"><h2>万物互联，时刻在位。</h2><p>支持 LHDC 5.0 无损解析。<br>厘米级精准找回与多设备无缝切换，强大的内在，只为优雅而生。</p></div>
+        <div class="text-block theme-light-bg"><h1 style="font-size: 6rem;">倾听未来。</h1><p style="margin-bottom: 20px; font-size: 1.6rem; color: #555;">即刻入舱，满血续航，沉入你的绝对领域。</p><a href="#" class="btn-buy">立即选购</a></div>
+    </div>
+
+    <script>
+        // === 1. 引擎状态 ===
+        let targetLidAngle = 0;
+        let tBasePosY = 0; 
+        let tBS = 1, tBPY = 0.15, tBSX = 0.45, tBRX = 0, tBRY = 0.2; 
+        let isANC = false, isDolby = false, isEq = false, isTouchMode = false;
+        let mouseX = 0, mouseY = 0;
+
+        let targetBodyColor = new THREE.Color(0xffffff);
+        let targetSiliconeColor = new THREE.Color(0xffffff);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 4, 8.5); camera.lookAt(0, -0.2, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // ⭐ 核心升级：摄像机自适应逻辑，保证手机竖屏不穿帮
+        function updateCamera() {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            // 如果是手机竖屏 (aspect < 1)，增大 FOV 让模型整体缩小，完美适配屏幕宽度
+            if (aspect < 1) {
+                camera.fov = 30 * (1 / aspect) * 0.75; 
+            } else {
+                camera.fov = 30; // 电脑端恢复标准视角
+            }
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', updateCamera);
+        updateCamera(); // 初始化调用
+
+        function createWaveBars(id) { const c = document.getElementById(id); for(let i=0; i<25; i++){ const b=document.createElement('div'); b.className='wave-bar'; c.appendChild(b); } }
+        createWaveBars('anc-left'); createWaveBars('anc-right');
+
+        // === 2. 高阶灯光与材质 ===
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85); scene.add(ambientLight);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.2); mainLight.position.set(5, 10, 7); scene.add(mainLight);
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.9); rimLight.position.set(-6, 5, -8); scene.add(rimLight);
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.4); fillLight.position.set(0, -5, 5); scene.add(fillLight);
+
+        const glossyMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.12, metalness: 0.05, clearcoat: 1.0, clearcoatRoughness: 0.1 });
+        const siliconeMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 0.9, opacity: 1, transparent: true, roughness: 0.2, thickness: 0.5 });
+        const grayIndentedMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, roughness: 0.9, metalness: 0.0, side: THREE.BackSide }); 
+
+        // === 3. 平行解耦 3D 模型架构 ===
+        const masterGroup = new THREE.Group(); scene.add(masterGroup); 
+        const baseGroup = new THREE.Group(); masterGroup.add(baseGroup); 
+        const budsGroup = new THREE.Group(); masterGroup.add(budsGroup); 
+
+        const caseW = 1.35, caseH = 1.15, caseD = 0.65, hD = 0.45, hR = 0.26;
+
+        const bottom = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64, 0, Math.PI*2, Math.PI/2, Math.PI/2), glossyMat);
+        bottom.scale.set(caseW, caseH, caseD); baseGroup.add(bottom);
+        
+        const dShp = new THREE.Shape(); dShp.absellipse(0, 0, caseW-0.01, caseD-0.01, 0, Math.PI*2, false);
+        const hole1 = new THREE.Path(); hole1.absarc(-hD, 0, hR, 0, Math.PI*2, true);
+        const hole2 = new THREE.Path(); hole2.absarc(hD, 0, hR, 0, Math.PI*2, true);
+        dShp.holes.push(hole1, hole2);
+        const deckGeo = new THREE.ShapeGeometry(dShp, 64);
+        const lowerDeck = new THREE.Mesh(deckGeo, glossyMat); lowerDeck.rotation.x = -Math.PI / 2; baseGroup.add(lowerDeck);
+
+        const lH = new THREE.Mesh(new THREE.CylinderGeometry(hR, 0.18, 0.9, 32, 1, true), new THREE.MeshStandardMaterial({color:0xcccccc, side:THREE.BackSide})); lH.position.set(-hD, -0.45, 0); baseGroup.add(lH);
+        const rH = new THREE.Mesh(new THREE.CylinderGeometry(hR, 0.18, 0.9, 32, 1, true), new THREE.MeshStandardMaterial({color:0xcccccc, side:THREE.BackSide})); rH.position.set(hD, -0.45, 0); baseGroup.add(rH);
+
+        const ledMesh = new THREE.Mesh(new THREE.SphereGeometry(0.015, 16), new THREE.MeshBasicMaterial({color: 0x444444}));
+        ledMesh.position.set(0, -0.3, caseD-0.03); baseGroup.add(ledMesh);
+
+        const lidPivot = new THREE.Group(); lidPivot.position.set(0, 0, -caseD); baseGroup.add(lidPivot);
+        const upperGroup = new THREE.Group(); upperGroup.position.set(0, 0, caseD); lidPivot.add(upperGroup);
+        const lidShell = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 64, 0, Math.PI*2, 0, Math.PI/2), glossyMat); lidShell.scale.set(caseW, caseH, caseD); upperGroup.add(lidShell);
+        const uDeck = new THREE.Mesh(deckGeo, glossyMat); uDeck.rotation.x = Math.PI / 2; upperGroup.add(uDeck);
+
+        // 完美物理凹槽 (保持修复版)
+        const cavityGeo = new THREE.SphereGeometry(hR, 32, 32, 0, Math.PI*2, 0, Math.PI/2);
+        const lTopCavity = new THREE.Mesh(cavityGeo, grayIndentedMat); lTopCavity.rotation.x = Math.PI; lTopCavity.position.set(-hD, 0.005, 0); upperGroup.add(lTopCavity);
+        const rTopCavity = new THREE.Mesh(cavityGeo, grayIndentedMat); rTopCavity.rotation.x = Math.PI; rTopCavity.position.set(hD, 0.005, 0); upperGroup.add(rTopCavity);
+
+        function createCCCLogoMap() { const cv = document.createElement('canvas'); cv.width=256; cv.height=256; const ct=cv.getContext('2d'); ct.fillStyle='#000'; ct.fillRect(0,0,256,256); ct.strokeStyle='#fff'; ct.lineWidth=10; ct.beginPath(); ct.arc(128,128,100,0,Math.PI*2); ct.stroke(); ct.fillStyle='#fff'; ct.font='bold 80px Arial'; ct.textAlign='center'; ct.fillText('CCC',128,155); return new THREE.CanvasTexture(cv); }
+        const cccPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.07,0.07), new THREE.MeshStandardMaterial({color:0x888888, alphaMap:createCCCLogoMap(), transparent:true, depthWrite:false}));
+        cccPlane.rotation.x = Math.PI/2; cccPlane.position.set(-0.85, 0.015, -0.3); upperGroup.add(cccPlane);
+
+        // 耳机本体
+        function createBud(isL) {
+            const g = new THREE.Group(); const s = isL ? 1 : -1;
+            const body = new THREE.Mesh(new THREE.SphereGeometry(0.22, 64, 64), glossyMat); body.scale.set(0.95, 1, 1.1); g.add(body);
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.045, 0.7, 32), glossyMat); stem.position.set(-0.04*s, -0.38, 0.05); stem.rotation.z = 0.12*s; stem.rotation.x = -0.08; g.add(stem);
+            const tp = new THREE.Mesh(new THREE.SphereGeometry(0.18, 64, 64, 0, Math.PI*2, 0, Math.PI/1.5), siliconeMat); tp.position.set(0.18*s, -0.05, 0.05); tp.rotation.z = -Math.PI/2*s; tp.rotation.y = -0.1*s; g.add(tp);
+            const vent = new THREE.Mesh(new THREE.CircleGeometry(0.07, 32), new THREE.MeshBasicMaterial({ color: 0x111111 })); vent.position.set(-0.16*s, 0.08, 0.16); vent.rotation.y = -0.5*s; vent.rotation.x = -0.2; g.add(vent);
+            
+            const tzGroup = new THREE.Group();
+            const tzDot = new THREE.Mesh(new THREE.CircleGeometry(0.035, 32), new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0, depthTest: false }));
+            const tzRing = new THREE.Mesh(new THREE.RingGeometry(0.045, 0.07, 32), new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0, depthTest: false }));
+            tzGroup.add(tzDot, tzRing); tzGroup.position.set(-0.21 * s, 0, 0); tzGroup.rotation.y = -Math.PI/2 * s;
+            g.add(tzGroup); g.userData.touchUI = { dot: tzDot, ring: tzRing };
+            
+            g.position.set(-hD*s, 0.15, 0); g.rotation.y = 0.2*s; return g;
+        }
+        const leftBud = createBud(true); budsGroup.add(leftBud);
+        const rightBud = createBud(false); budsGroup.add(rightBud);
+
+        // 杜比粒子 (保持原有)
+        const dolbyGroup = new THREE.Group(); budsGroup.add(dolbyGroup);
+        const particleMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0 });
+        for(let i=0; i<80; i++) {
+            const p = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), particleMat);
+            const radius = 1.0 + Math.random() * 0.8;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos((Math.random() * 2) - 1);
+            p.position.set(radius * Math.sin(phi) * Math.cos(theta), radius * Math.cos(phi), radius * Math.sin(phi) * Math.sin(theta));
+            dolbyGroup.add(p);
+        }
+
+        // === 4. 滚动主控轴 ===
+        function setBg(id) { document.querySelectorAll('.bg-layer').forEach(el => el.classList.remove('bg-active')); document.getElementById('bg-'+id).classList.add('bg-active'); }
+
+        function updateScroll() {
+            const p = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight);
+            const bks = document.querySelectorAll('.text-block');
+            bks.forEach((b, i) => { const s = i * 0.0625; if(p >= s && p < s+0.0625) b.classList.add('visible'); else b.classList.remove('visible'); });
+
+            ledMesh.material.color.setHex(0x444444); 
+            isEq=isDolby=isANC=isTouchMode=false;
+            document.getElementById('water-surface').classList.remove('active');
+            document.getElementById('eq-panel').classList.remove('active');
+            document.querySelectorAll('.cinema-bar').forEach(el=>el.classList.remove('cinema-active'));
+            document.getElementById('anc-left').classList.remove('active');
+            document.getElementById('anc-right').classList.remove('active');
+
+            if (p < 0.125) {
+                targetLidAngle = p < 0.0625 ? 0 : -Math.PI/1.55;
+                targetBodyColor.setHex(0xffffff); targetSiliconeColor.setHex(0xffffff);
+                tBasePosY = 0; tBPY = 0.15; tBSX = hD; tBS = 1; tBRX = 0; tBRY = 0.2; setBg('intro');
+            } else if (p < 0.1875) {
+                targetBodyColor.setHex(0x222224); targetSiliconeColor.setHex(0x111111);
+                tBasePosY = 0; tBPY = 0.15; tBSX = hD; tBS = 1; setBg('black');
+            } else if (p < 0.25) {
+                targetBodyColor.setHex(0xffe8ec); targetSiliconeColor.setHex(0xffd1dc);
+                tBasePosY = 0; tBPY = 0.15; tBSX = hD; tBS = 1; setBg('pink');
+            } else if (p < 0.3125) {
+                targetBodyColor.setHex(0xe0f2fe); targetSiliconeColor.setHex(0xcaf0f8);
+                tBasePosY = 0; tBPY = 0.15; tBSX = hD; tBS = 1; setBg('blue');
+            } else if (p < 0.375) {
+                targetBodyColor.setHex(0xffffff); targetSiliconeColor.setHex(0xffffff); setBg('intro');
+                const lp = (p - 0.3125) / 0.0625;
+                tBasePosY = 0 - 10 * lp; tBPY = 0.15 + (0.8 - 0.15) * lp; tBSX = hD + (1.3 - hD) * lp; tBS = 1 + 1.5 * lp;
+            } else if (p < 0.4375) {
+                tBasePosY = -10; tBPY = 0.8; tBSX = 1.3; tBS = 2.5; tBRX = 0; tBRY = 0.2;
+                setBg('anc'); isANC = true; document.getElementById('anc-left').classList.add('active'); document.getElementById('anc-right').classList.add('active');
+            } else if (p < 0.5) {
+                tBasePosY = -10; tBPY = 0.8; tBSX = 1.3; tBS = 2.5; tBRX = 0; tBRY = 0.2;
+                setBg('intro'); isTouchMode = true;
+            } else if (p < 0.5625) {
+                tBasePosY = -10; tBS = 2.5; tBSX = 1.3; setBg('water'); document.getElementById('water-surface').classList.add('active');
+                const lp = (p - 0.5)/0.0625; tBPY = 0.8 - Math.sin(lp*Math.PI)*2.5; tBRX = lp*Math.PI*2; tBRY = 0.2;
+            } else if (p < 0.625) {
+                tBasePosY = -10; tBS = 2.5; tBPY = 0.8; tBSX = 1.6; tBRX = 0; tBRY = 0.2;
+                setBg('black'); isANC = true;
+            } else if (p < 0.6875) {
+                tBasePosY = -10; tBS = 2.5; tBPY = 0.4; tBSX = 0; tBRX = 0; tBRY = 0;
+                setBg('eq'); isEq = true; document.getElementById('eq-panel').classList.add('active');
+            } else if (p < 0.75) {
+                tBasePosY = -10; tBS = 2.5; tBPY = 0.4; tBSX = 1.2; tBRX = 0;
+                const lp = (p - 0.6875)/0.0625; setBg('mountain'); tBRY = lp * Math.PI*2;
+                if(lp < 0.33) { targetBodyColor.setHex(0x333333); targetSiliconeColor.setHex(0x222222); }
+                else if(lp < 0.66) { targetBodyColor.setHex(0xffc0cb); targetSiliconeColor.setHex(0xffe4e1); }
+                else { targetBodyColor.setHex(0xbce3ff); targetSiliconeColor.setHex(0xe0f2fe); }
+            } else if (p < 0.8125) {
+                targetBodyColor.setHex(0xffffff); targetSiliconeColor.setHex(0xffffff); setBg('black');
+                tBasePosY = -10; tBS = 2.5; tBSX = 1.2;
+                const lp = (p - 0.75)/0.0625;
+                if (lp < 0.5) { tBPY = 0.8 - lp*4; tBRX = 0; } else { tBPY = -1.2 + (lp-0.5)*4; tBRX = (lp-0.5)*Math.PI*4; if(lp<0.55) document.querySelector('.shockwave').classList.add('trigger'); }
+            } else if (p < 0.875) {
+                targetBodyColor.setHex(0xffffff); targetSiliconeColor.setHex(0xffffff); setBg('dolby');
+                tBasePosY = -10; tBS = 3.2; tBPY = 0.8; tBSX = 1.3; tBRX = 0; tBRY = 0.2;
+                isDolby = true; document.querySelectorAll('.cinema-bar').forEach(el=>el.classList.add('cinema-active'));
+            } else if (p < 0.9375) {
+                setBg('intro');
+                const lp = (p - 0.875)/0.0625;
+                tBS = 3.2 - (3.2-1)*lp; tBSX = 1.3 - (1.3-hD)*lp; tBPY = 0.8 - (0.8-0.15)*lp; tBRX = 0; tBRY = 0.2;
+                tBasePosY = -10 + 10 * lp; targetLidAngle = -Math.PI/1.55;
+            } else {
+                setBg('intro'); tBasePosY = 0; tBPY = 0.15; tBSX = hD; tBS = 1; tBRX = 0; tBRY = 0.2;
+                const lp = (p - 0.9375)/0.0625; targetLidAngle = -Math.PI/1.55 * (1 - lp); ledMesh.material.color.setHex(0xffaa00);
+            }
+
+            baseGroup.visible = tBasePosY > -9; // 隐藏底座
+        }
+
+        window.addEventListener('scroll', updateScroll);
+
+        // 手机端触摸支持与电脑端鼠标兼容
+        window.addEventListener('mousemove', (e) => { mouseX=(e.clientX/innerWidth)*2-1; mouseY=-(e.clientY/innerHeight)*2+1; });
+        window.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) {
+                mouseX = (e.touches[0].clientX / innerWidth) * 2 - 1;
+                mouseY = -(e.touches[0].clientY / innerHeight) * 2 + 1;
+            }
+        }, {passive: true});
+
+        const clock = new THREE.Clock();
+        const vS=new THREE.Vector3(), vP_L=new THREE.Vector3(), vP_R=new THREE.Vector3();
+
+        function animate() {
+            requestAnimationFrame(animate); const t = clock.getElapsedTime();
+            
+            glossyMat.color.lerp(targetBodyColor, 0.08);
+            siliconeMat.color.lerp(targetSiliconeColor, 0.08);
+
+            vS.setScalar(tBS); vP_L.set(-tBSX, tBPY, 0); vP_R.set(tBSX, tBPY, 0);
+            leftBud.scale.lerp(vS, 0.08); rightBud.scale.lerp(vS, 0.08);
+            
+            const offset = baseGroup.visible ? (tBasePosY - baseGroup.position.y) : 0;
+            leftBud.position.lerp(vP_L.clone().setY(tBPY + offset), 0.08); 
+            rightBud.position.lerp(vP_R.clone().setY(tBPY + offset), 0.08);
+            
+            leftBud.rotation.x+=(tBRX-leftBud.rotation.x)*0.08; leftBud.rotation.y+=(tBRY-leftBud.rotation.y)*0.08;
+            rightBud.rotation.x+=(tBRX-rightBud.rotation.x)*0.08; rightBud.rotation.y+=(-tBRY-rightBud.rotation.y)*0.08;
+            
+            lidPivot.rotation.x += (targetLidAngle - lidPivot.rotation.x) * 0.1;
+            if (baseGroup.visible) {
+                baseGroup.position.y += (tBasePosY - baseGroup.position.y) * 0.08;
+            }
+
+            // ⭐ 移动端全局向下偏移适配，避让顶部文字 ⭐
+            const isMobile = window.innerWidth <= 768;
+            const mobileYOffset = isMobile ? -0.8 : 0; 
+            
+            masterGroup.position.y = Math.sin(t*1.5)*0.03 + mobileYOffset;
+            masterGroup.rotation.y += (mouseX*0.2 - masterGroup.rotation.y)*0.08;
+            masterGroup.rotation.x += (-mouseY*0.1 - masterGroup.rotation.x)*0.08;
+
+            [leftBud, rightBud].forEach(bud => {
+                const ui = bud.userData.touchUI;
+                if(isTouchMode) { 
+                    ui.dot.material.opacity += (0.9 - ui.dot.material.opacity) * 0.1;
+                    ui.ring.material.opacity += (0.7 - ui.ring.material.opacity) * 0.1;
+                    const s = 1.0 + Math.sin(t * 8) * 0.15; ui.ring.scale.set(s, s, s); 
+                } else { 
+                    ui.dot.material.opacity += (0.0 - ui.dot.material.opacity) * 0.15;
+                    ui.ring.material.opacity += (0.0 - ui.ring.material.opacity) * 0.15;
+                }
+            });
+
+            if (isDolby) {
+                dolbyGroup.rotation.y += 0.005; dolbyGroup.rotation.x += 0.002;
+                dolbyGroup.position.set(0, tBPY, 0); 
+                dolbyGroup.children.forEach(p => p.material.opacity += (0.8 - p.material.opacity) * 0.05);
+            } else {
+                dolbyGroup.children.forEach(p => p.material.opacity += (0 - p.material.opacity) * 0.1);
+            }
+
+            if(isANC) document.querySelectorAll('.wave-bar').forEach((bar, i) => { bar.style.height = (20 + Math.abs(Math.sin(t * 8 + i * 0.3)) * 60) + '%'; });
+            if(isEq) document.querySelectorAll('.eq-bar').forEach((b,i)=>b.style.height=`${20 + Math.abs(Math.sin(t*6+i*1.5))*80}%`);
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
